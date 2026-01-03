@@ -3,8 +3,12 @@
 # Exit on error
 set -e
 
-echo "Installing Flutter..."
-git clone https://github.com/flutter/flutter.git -b stable _flutter
+if [ -d "_flutter" ]; then
+  echo "Flutter already installed."
+else
+  echo "Installing Flutter..."
+  git clone https://github.com/flutter/flutter.git -b stable _flutter
+fi
 export PATH="$PATH:`pwd`/_flutter/bin"
 
 echo "Flutter version:"
