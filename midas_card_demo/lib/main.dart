@@ -214,7 +214,7 @@ class _MidasCardState extends State<MidasCard>
                         alignment: Alignment.center,
                         transform: Matrix4.identity()
                           ..setEntry(3, 2, 0.001) // Perspective
-                          ..rotateY(_controller.value * 2 * math.pi), // Y-Axis Rotation
+                          ..rotateX(_controller.value * 2 * math.pi), // X-Axis Rotation (Vertical flip)
                         child: child,
                       );
                     },
