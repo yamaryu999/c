@@ -36,15 +36,17 @@ class _MidasCardPageViewState extends State<MidasCardPageView> {
 
   // Data for the 2 Specific Cards
   final List<MidasCardData> cards = [
-    // 1. Mikuni Souichiro (Purple)
+    // 1. Mikuni Souichiro
     MidasCardData(
       assetImagePath: "assets/card_mikuni_v2.jpg",
-      logoAssetPath: "assets/logo_mikuni_v2.jpg",
+      logoAssetPath: "assets/logo_mikuni_precise.jpg",
+      logoSizeRatio: 0.511, // Calculated by OpenCV
     ),
-    // 2. Yoga Kimimaro (Black) - Note: Yoga is often the 'protagonist' card
+    // 2. Yoga Kimimaro
     MidasCardData(
       assetImagePath: "assets/card_yoga_v2.jpg",
-      logoAssetPath: "assets/logo_yoga_v2.jpg",
+      logoAssetPath: "assets/logo_yoga_precise.jpg",
+      logoSizeRatio: 0.568, // Calculated by OpenCV
     ),
   ];
 
@@ -70,10 +72,12 @@ class _MidasCardPageViewState extends State<MidasCardPageView> {
 class MidasCardData {
   final String assetImagePath;
   final String logoAssetPath;
+  final double logoSizeRatio;
 
   MidasCardData({
     required this.assetImagePath,
     required this.logoAssetPath,
+    required this.logoSizeRatio,
   });
 }
 
@@ -109,10 +113,8 @@ class _MidasCardState extends State<MidasCard>
     final double width = MediaQuery.of(context).size.width * 0.85;
     final double height = width / aspectRatio;
 
-    // Logo size relative to card height.
-    // Based on the cropped images, the new v2 images are single cards.
-    // The logo is a central feature.
-    final double logoSize = height * 0.75;
+    // Use specific ratio for logo size
+    final double logoSize = height * widget.data.logoSizeRatio;
 
     return Container(
       width: width,
@@ -139,7 +141,7 @@ class _MidasCardState extends State<MidasCard>
               ),
             ),
             
-            // 2. Rotating Center Emblem (Real Image)
+            // 2. Rotating Center Emblem (Precise)
             Positioned.fill(
               child: Center(
                 child: SizedBox(
@@ -149,9 +151,12 @@ class _MidasCardState extends State<MidasCard>
                     alignment: Alignment.center,
                     children: [
                       // Mask to hide the photo's emblem
+                      // Since we have a precise circle now, the mask should match perfectly.
+                      // We'll make it slightly smaller to avoid edge bleeding?
+                      // Actually, if we rotate, the background static logo will show if the mask isn't there.
                       Container(
-                        width: logoSize * 0.9, 
-                        height: logoSize * 0.9,
+                        width: logoSize, 
+                        height: logoSize,
                         decoration: const BoxDecoration(
                           color: Colors.black, // Dark mask
                           shape: BoxShape.circle,
