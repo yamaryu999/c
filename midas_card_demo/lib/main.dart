@@ -46,7 +46,7 @@ class _MidasCardPageViewState extends State<MidasCardPageView> {
     MidasCardData(
       assetImagePath: "assets/card_yoga_v2.jpg",
       logoAssetPath: "assets/logo_yoga_precise.jpg",
-      logoSizeRatio: 0.568, // Calculated by OpenCV
+      logoSizeRatio: 0.800, // Calculated by Threshold method
     ),
   ];
 
