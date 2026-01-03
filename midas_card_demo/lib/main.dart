@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:flutter/physics.dart'; // Import for physics simulations
+import 'package:flutter/physics.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 void main() {
@@ -41,13 +41,15 @@ class _MidasCardPageViewState extends State<MidasCardPageView> {
     MidasCardData(
       assetImagePath: "assets/card_mikuni_v2.jpg",
       logoAssetPath: "assets/logo_mikuni_precise.jpg",
-      logoSizeRatio: 0.511, // Calculated by OpenCV
+      logoSizeRatio: 0.511, 
+      glowColor: Colors.purpleAccent, // Mikuni theme
     ),
     // 2. Yoga Kimimaro
     MidasCardData(
       assetImagePath: "assets/card_yoga_v2.jpg",
       logoAssetPath: "assets/logo_yoga_precise.jpg",
-      logoSizeRatio: 0.800, // Calculated by Threshold method
+      logoSizeRatio: 0.800,
+      glowColor: Colors.amber, // Yoga theme (Gold/Amber)
     ),
   ];
 
@@ -74,11 +76,13 @@ class MidasCardData {
   final String assetImagePath;
   final String logoAssetPath;
   final double logoSizeRatio;
+  final Color glowColor;
 
   MidasCardData({
     required this.assetImagePath,
     required this.logoAssetPath,
     required this.logoSizeRatio,
+    required this.glowColor,
   });
 }
 
@@ -91,44 +95,50 @@ class MidasCard extends StatefulWidget {
 }
 
 class _MidasCardState extends State<MidasCard>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
+    with TickerProviderStateMixin { // Changed to TickerProviderStateMixin for multiple controllers
+  late AnimationController _rotationController;
+  late AnimationController _glowController;
+  late AnimationController _glareController;
 
   @override
   void initState() {
     super.initState();
-    // Unbounded controller to allow infinite spinning
-    _controller = AnimationController.unbounded(vsync: this);
+    // Rotation Controller (Physics)
+    _rotationController = AnimationController.unbounded(vsync: this);
+
+    // Glow Controller (Breathing)
+    _glowController = AnimationController(
+      vsync: this, 
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+    
+    // Glare Controller (Periodic Sweep)
+    _glareController = AnimationController(
+        vsync: this,
+        duration: const Duration(seconds: 4)
+    )..repeat();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _rotationController.dispose();
+    _glowController.dispose();
+    _glareController.dispose();
     super.dispose();
   }
 
   void _onPanUpdate(DragUpdateDetails details) {
-    // Touch control: Map vertical drag to rotation
-    // Sensitivity factor: how much angle changes per pixel dragged
-    // 0.01 radians per pixel seems reasonable
-    _controller.value += details.delta.dy * 0.01;
+    _rotationController.value += details.delta.dy * 0.01;
   }
 
   void _onPanEnd(DragEndDetails details) {
-    // Inertia: Use FrictionSimulation
-    // velocity is pixels/second. We need to convert it to radians/second same as above sensitivity.
     final velocity = details.velocity.pixelsPerSecond.dy * 0.01;
-    
-    // Friction coefficient: Lower = slides longer. 
-    // 0.5 feels like a good bearing.
-    final simulation = FrictionSimulation(0.1, _controller.value, velocity);
-    
-    _controller.animateWith(simulation);
+    final simulation = FrictionSimulation(0.1, _rotationController.value, velocity);
+    _rotationController.animateWith(simulation);
   }
   
   void _onPanDown(DragDownDetails details) {
-    // Stop animation immediately on touch
-    _controller.stop();
+    _rotationController.stop();
   }
 
   @override
@@ -137,7 +147,6 @@ class _MidasCardState extends State<MidasCard>
     final double width = MediaQuery.of(context).size.width * 0.85;
     final double height = width / aspectRatio;
 
-    // Use specific ratio for logo size
     final double logoSize = height * widget.data.logoSizeRatio;
 
     return Container(
@@ -165,14 +174,39 @@ class _MidasCardState extends State<MidasCard>
               ),
             ),
             
-            // 2. Rotating Center Emblem (Interactive)
-            // Wrap in GestureDetector for touch
+            // 2. Pulsing Glow (Behind Logo)
+            Positioned.fill(
+                child: Center(
+                    child: AnimatedBuilder(
+                        animation: _glowController,
+                        builder: (context, child) {
+                            // Pulse opacity and spread
+                            return Container(
+                                width: logoSize * 0.8,
+                                height: logoSize * 0.8,
+                                decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                        BoxShadow(
+                                            color: widget.data.glowColor.withOpacity(0.3 + 0.3 * _glowController.value),
+                                            blurRadius: 20 + 30 * _glowController.value,
+                                            spreadRadius: 5 + 10 * _glowController.value,
+                                        )
+                                    ]
+                                ),
+                            );
+                        }
+                    )
+                )
+            ),
+
+            // 3. Rotating Center Emblem (Interactive)
             Positioned.fill(
               child: GestureDetector(
                 onPanDown: _onPanDown,
                 onPanUpdate: _onPanUpdate,
                 onPanEnd: _onPanEnd,
-                behavior: HitTestBehavior.opaque, // Catch touches
+                behavior: HitTestBehavior.opaque,
                 child: Center(
                   child: SizedBox(
                     width: logoSize, 
@@ -180,25 +214,25 @@ class _MidasCardState extends State<MidasCard>
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        // Mask to hide the photo's emblem
+                        // Mask
                         Container(
                           width: logoSize, 
                           height: logoSize,
                           decoration: const BoxDecoration(
-                            color: Colors.black, // Dark mask
+                            color: Colors.black, 
                             shape: BoxShape.circle,
                           ),
                         ),
                         
-                        // The Animated Emblem Image
+                        // Rotator
                         AnimatedBuilder(
-                          animation: _controller,
+                          animation: _rotationController,
                           builder: (context, child) {
                             return Transform(
                               alignment: Alignment.center,
                               transform: Matrix4.identity()
-                                ..setEntry(3, 2, 0.001) // Perspective
-                                ..rotateX(_controller.value), // Physics driven value as Angle
+                                ..setEntry(3, 2, 0.001) 
+                                ..rotateX(_rotationController.value),
                               child: child,
                             );
                           },
@@ -215,6 +249,76 @@ class _MidasCardState extends State<MidasCard>
                 ),
               ),
             ),
+            
+            // 4. Glare Overlay (Top Layer)
+            Positioned.fill(
+                child: IgnorePointer( // Don't block touches
+                    child: AnimatedBuilder(
+                        animation: _glareController,
+                        builder: (context, child) {
+                            // Sweep gradient across
+                            return ShaderMask(
+                                shaderCallback: (rect) {
+                                    return LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: [
+                                            Colors.white.withOpacity(0.0),
+                                            Colors.white.withOpacity(0.2), // The shine
+                                            Colors.white.withOpacity(0.0),
+                                        ],
+                                        stops: [
+                                            _glareController.value - 0.2,
+                                            _glareController.value,
+                                            _glareController.value + 0.2,
+                                        ],
+                                        transform: const GradientRotation(0.5), // slight tilt
+                                    ).createShader(rect);
+                                },
+                                blendMode: BlendMode.overlay, // Adds brightness
+                                child: Container(
+                                   color: Colors.transparent, // Needed for ShaderMask? 
+                                   // Actually ShaderMask masks the child. We want to DRAW a gradient on top.
+                                   // Better approach: Container with Gradient decoration + BlendMode
+                                ),
+                            );
+                        },
+                        // Alternative Glare Implementation: 
+                        // A white container with gradient opacity that moves.
+                        child: Container(),
+                    ),
+                ),
+            ),
+            // Let's try a simpler overlay approach for Glare that works reliably
+             Positioned.fill(
+                child: IgnorePointer(
+                    child: AnimatedBuilder(
+                        animation: _glareController,
+                        builder: (context, child) {
+                           // 0.0 to 1.0 sweep
+                           // 4 seconds duration. Let's make it sweep quickly then wait.
+                           // interval: 0.0-0.3 sweep, 0.3-1.0 wait
+                           double t = _glareController.value;
+                           double offset = -1.0 + (t * 3.0); // -1 to 2 range roughly
+                           
+                           return Container(
+                               decoration: BoxDecoration(
+                                   gradient: LinearGradient(
+                                       begin: Alignment(-2.0 + offset, -1.0),
+                                       end: Alignment(offset, 1.0),
+                                       colors: [
+                                           Colors.transparent,
+                                           Colors.white.withOpacity(0.15),
+                                           Colors.transparent,
+                                       ],
+                                       stops: const [0.0, 0.5, 1.0]
+                                   ),
+                               ),
+                           );
+                        }
+                    )
+                )
+             )
           ],
         ),
       ),
