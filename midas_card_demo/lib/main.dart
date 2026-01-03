@@ -34,27 +34,17 @@ class MidasCardPageView extends StatefulWidget {
 class _MidasCardPageViewState extends State<MidasCardPageView> {
   final PageController _pageController = PageController(viewportFraction: 0.9);
 
-  // Data for the 4 Cards
+  // Data for the 2 Specific Cards
   final List<MidasCardData> cards = [
-    // 1. Yoga Kimimaro
+    // 1. Mikuni Souichiro (Purple)
     MidasCardData(
-      assetImagePath: "assets/card_yoga.jpg",
-      logoAssetPath: "assets/logo_yoga.jpg",
+      assetImagePath: "assets/card_mikuni_v2.jpg",
+      logoAssetPath: "assets/logo_mikuni_v2.jpg",
     ),
-    // 2. Mikuni Souichiro
+    // 2. Yoga Kimimaro (Black) - Note: Yoga is often the 'protagonist' card
     MidasCardData(
-      assetImagePath: "assets/card_mikuni.jpg",
-      logoAssetPath: "assets/logo_mikuni.jpg",
-    ),
-    // 3. Jennifer Satou
-    MidasCardData(
-      assetImagePath: "assets/card_jennifer.jpg",
-      logoAssetPath: "assets/logo_jennifer.jpg",
-    ),
-    // 4. Senzaki Kou
-    MidasCardData(
-      assetImagePath: "assets/card_senzaki.jpg",
-      logoAssetPath: "assets/logo_senzaki.jpg",
+      assetImagePath: "assets/card_yoga_v2.jpg",
+      logoAssetPath: "assets/logo_yoga_v2.jpg",
     ),
   ];
 
@@ -119,8 +109,9 @@ class _MidasCardState extends State<MidasCard>
     final double width = MediaQuery.of(context).size.width * 0.85;
     final double height = width / aspectRatio;
 
-    // Logo size relative to card height
-    // Based on visual, the circle is quite large.
+    // Logo size relative to card height.
+    // Based on the cropped images, the new v2 images are single cards.
+    // The logo is a central feature.
     final double logoSize = height * 0.75;
 
     return Container(
@@ -157,12 +148,12 @@ class _MidasCardState extends State<MidasCard>
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      // Mask to hide the photo's emblem (Black circle)
+                      // Mask to hide the photo's emblem
                       Container(
                         width: logoSize * 0.9, 
                         height: logoSize * 0.9,
                         decoration: const BoxDecoration(
-                          color: Colors.black, // Masking layer
+                          color: Colors.black, // Dark mask
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -175,7 +166,7 @@ class _MidasCardState extends State<MidasCard>
                             alignment: Alignment.center,
                             transform: Matrix4.identity()
                               ..setEntry(3, 2, 0.001) // Perspective
-                              ..rotateX(_controller.value * 2 * math.pi), // X-Axis Rotation (Vertical flip)
+                              ..rotateX(_controller.value * 2 * math.pi), // Vertical rotation
                             child: child,
                           );
                         },
