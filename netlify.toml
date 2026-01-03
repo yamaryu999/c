@@ -1,0 +1,7 @@
+[build]
+  base = "midas_card_demo"
+  publish = "build/web"
+  command = "./build_flutter.sh"
+
+[context.production.environment]
+  FLUTTER_CHANNEL = "stable"
