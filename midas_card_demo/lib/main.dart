@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart'; // Import for physics simulations
 import 'package:google_fonts/google_fonts.dart';
 
 void main() {
@@ -96,15 +97,38 @@ class _MidasCardState extends State<MidasCard>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-        vsync: this, duration: const Duration(seconds: 12)) 
-      ..repeat();
+    // Unbounded controller to allow infinite spinning
+    _controller = AnimationController.unbounded(vsync: this);
   }
 
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  void _onPanUpdate(DragUpdateDetails details) {
+    // Touch control: Map vertical drag to rotation
+    // Sensitivity factor: how much angle changes per pixel dragged
+    // 0.01 radians per pixel seems reasonable
+    _controller.value += details.delta.dy * 0.01;
+  }
+
+  void _onPanEnd(DragEndDetails details) {
+    // Inertia: Use FrictionSimulation
+    // velocity is pixels/second. We need to convert it to radians/second same as above sensitivity.
+    final velocity = details.velocity.pixelsPerSecond.dy * 0.01;
+    
+    // Friction coefficient: Lower = slides longer. 
+    // 0.5 feels like a good bearing.
+    final simulation = FrictionSimulation(0.1, _controller.value, velocity);
+    
+    _controller.animateWith(simulation);
+  }
+  
+  void _onPanDown(DragDownDetails details) {
+    // Stop animation immediately on touch
+    _controller.stop();
   }
 
   @override
@@ -141,48 +165,52 @@ class _MidasCardState extends State<MidasCard>
               ),
             ),
             
-            // 2. Rotating Center Emblem (Precise)
+            // 2. Rotating Center Emblem (Interactive)
+            // Wrap in GestureDetector for touch
             Positioned.fill(
-              child: Center(
-                child: SizedBox(
-                  width: logoSize, 
-                  height: logoSize,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // Mask to hide the photo's emblem
-                      // Since we have a precise circle now, the mask should match perfectly.
-                      // We'll make it slightly smaller to avoid edge bleeding?
-                      // Actually, if we rotate, the background static logo will show if the mask isn't there.
-                      Container(
-                        width: logoSize, 
-                        height: logoSize,
-                        decoration: const BoxDecoration(
-                          color: Colors.black, // Dark mask
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      
-                      // The Animated Emblem Image
-                      AnimatedBuilder(
-                        animation: _controller,
-                        builder: (context, child) {
-                          return Transform(
-                            alignment: Alignment.center,
-                            transform: Matrix4.identity()
-                              ..setEntry(3, 2, 0.001) // Perspective
-                              ..rotateX(_controller.value * 2 * math.pi), // Vertical rotation
-                            child: child,
-                          );
-                        },
-                        child: ClipOval(
-                          child: Image.asset(
-                            widget.data.logoAssetPath,
-                            fit: BoxFit.cover,
+              child: GestureDetector(
+                onPanDown: _onPanDown,
+                onPanUpdate: _onPanUpdate,
+                onPanEnd: _onPanEnd,
+                behavior: HitTestBehavior.opaque, // Catch touches
+                child: Center(
+                  child: SizedBox(
+                    width: logoSize, 
+                    height: logoSize,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Mask to hide the photo's emblem
+                        Container(
+                          width: logoSize, 
+                          height: logoSize,
+                          decoration: const BoxDecoration(
+                            color: Colors.black, // Dark mask
+                            shape: BoxShape.circle,
                           ),
                         ),
-                      ),
-                    ],
+                        
+                        // The Animated Emblem Image
+                        AnimatedBuilder(
+                          animation: _controller,
+                          builder: (context, child) {
+                            return Transform(
+                              alignment: Alignment.center,
+                              transform: Matrix4.identity()
+                                ..setEntry(3, 2, 0.001) // Perspective
+                                ..rotateX(_controller.value), // Physics driven value as Angle
+                              child: child,
+                            );
+                          },
+                          child: ClipOval(
+                            child: Image.asset(
+                              widget.data.logoAssetPath,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
